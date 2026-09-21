@@ -1,6 +1,11 @@
 name: "Color Animal Generator"
 description: "Generates color-animal names"
 author: "Mitchell"
+inputs:
+  seed:
+    description: "Deterministic seed, random when empty."
+    required: false
+    default: ""
 outputs:
   result:
     value: ${{ steps.generate-name.outputs.result }}
@@ -10,5 +15,17 @@ runs:
   steps:
     - name: Generate the name
       id: generate-name
-      run: echo "result=$(shuf -n 1 "${{ github.action_path }}/colors.txt")-$(shuf -n 1 "${{ github.action_path }}/animals.txt")" >> $GITHUB_OUTPUT
       shell: bash
+      env:
+        SEED: ${{ inputs.seed }}
+      run: |
+        cd "${{ github.action_path }}"
+        pick() {
+          if [[ -n "$SEED" ]]; then
+            n=$(printf '%s' "$SEED$1" | cksum | cut -d ' ' -f 1)
+            sed -n "$(( n % $(wc -l < "$1") + 1 ))p" "$1"
+          else
+            shuf -n 1 "$1"
+          fi
+        }
+        echo "result=$(pick colors.txt)-$(pick animals.txt)" >> "$GITHUB_OUTPUT"
